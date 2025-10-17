@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدخال وعرض التقارير الاقتصادية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* إضافة خط عربي مناسب يدعم تايلويند */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f4f7f9;
+        }
+
+        /* تنسيق الجدول */
+        th, td {
+            border: 1px solid #c8d9e6;
+            padding: 4px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* تنسيق خلايا الرأس الرئيسية */
+        thead th {
+            background-color: #5d98cf; /* لون أزرق غامق */
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            line-height: 1.2;
+        }
+        
+        /* لون خلفية خلايا الإدخال (برتقالي فاتح) */
+        tbody td:not(:nth-child(2)):not(:nth-child(3)) {
+            background-color: #ffe0c2; 
+        }
+
+        /* تنسيق المدخلات داخل الجدول */
+        .data-input {
+            width: 100%;
+            height: 100%;
+            padding: 4px;
+            border: none;
+            outline: none;
+            background-color: transparent;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        /* تنسيق الخلايا الثابتة (السلع والوحدات) */
+        .fixed-cell {
+            background-color: #e6f0f5 !important;
+            font-weight: 600;
+        }
+
+        /* تنسيق الأزرار */
+        .primary-btn {
+            background-color: #059669; /* emerald-600 */
+        }
+        .primary-btn:hover {
+            background-color: #047857; /* emerald-700 */
+        }
+        .secondary-btn {
+            background-color: #3b82f6; /* blue-500 */
+        }
+        .secondary-btn:hover {
+            background-color: #2563eb; /* blue-600 */
+        }
+        
+        /* تنسيق صندوق الرسائل */
+        #outputData, #reportContent {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            direction: ltr; /* لتسهيل قراءة الرموز والأرقام */
+        }
+        #reportContent {
+            direction: rtl; /* إعادة الاتجاه للتقارير */
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+<div id="app-container" class="max-w-7xl mx-auto bg-white shadow-xl rounded-lg p-4">
+    <h1 class="text-xl sm:text-2xl font-bold text-center mb-6 text-blue-800 border-b-4 border-blue-500 pb-2">
+        نظام إدخال وعرض المردود الاقتصادي
+    </h1>
+
+    <!-- لوحة التبديل بين العروض -->
+    <div class="flex justify-center space-x-4 mb-6">
+        <button id="showEntryBtn" class="secondary-btn text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+            إدخال تقرير جديد
+        </button>
+        <button id="showReportsBtn" class="secondary-btn text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+            عرض التقارير المُخزنة
+        </button>
+    </div>
+    
+    <!-- مؤشر التحميل -->
+    <div id="loadingIndicator" class="text-center py-4 text-blue-500 hidden">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 inline-block"></div>
+        <p class="mt-2">جارٍ التحميل...</p>
+    </div>
+
+    <!-- 1. واجهة إدخال البيانات (الوضع الافتراضي) -->
+    <div id="dataEntryView">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">جدول 1: إدخال البيانات الاقتصادية</h2>
+        
+        <div class="overflow-x-auto">
+            <table id="data-table" class="min-w-full">
+                <thead>
+                    <tr>
+                        <th rowspan="3" class="w-[3%]">م</th>
+                        <th rowspan="3" class="w-[10%]">السلع الأساسية</th>
+                        <th rowspan="3" class="w-[7%]">الوحدة</th>
+                        <th colspan="7">الأسعار</th>
+                        <th colspan="2">زمن الوصول الى السوق</th>
+                    </tr>
+                    <tr>
+                        <th colspan="3">قبل التدخل</th>
+                        <th colspan="2">فارق الأسعار</th>
+                        <th colspan="2">بعد التدخل</th>
+                        <th rowspan="2">قبل التدخل (دقيقة)</th>
+                        <th rowspan="2">بعد التدخل (دقيقة)</th>
+                    </tr>
+                    <tr>
+                        <th class="w-[7%]">السعر في أقرب سوق</th>
+                        <th class="w-[7%]">السعر في المنطقة</th>
+                        <th class="w-[7%]">فارق التكلفة</th>
+                        <th class="w-[7%]">الفارق المتوقع</th>
+                        <th class="w-[7%]">فارق الكلفة</th>
+                        <th class="w-[7%]">السعر في المنطقة</th>
+                        <th class="w-[7%]">السعر في أقرب سوق</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- بيانات السلع -->
+                    <tr data-item="قمح"><td class="fixed-cell">1</td><td class="fixed-cell">قمح</td><td class="fixed-cell">كيس</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="دقيق"><td class="fixed-cell">2</td><td class="fixed-cell">دقيق</td><td class="fixed-cell">كيس</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="سكر"><td class="fixed-cell">3</td><td class="fixed-cell">سكر</td><td class="fixed-cell">قطمة 10 ك</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="أرز"><td class="fixed-cell">4</td><td class="fixed-cell">أرز</td><td class="fixed-cell">قطمة 10 ك</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="غاز"><td class="fixed-cell">5</td><td class="fixed-cell">غاز</td><td class="fixed-cell">اسطوانة</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="نقل راكب"><td class="fixed-cell">6</td><td class="fixed-cell">نقل راكب</td><td class="fixed-cell">راكب</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="مشوار أجرة"><td class="fixed-cell">7</td><td class="fixed-cell">مشوار أجرة</td><td class="fixed-cell">رحلة</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="أسمنت"><td class="fixed-cell">8</td><td class="fixed-cell">أسمنت</td><td class="fixed-cell">كيس</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="دبة زيت"><td class="fixed-cell">9</td><td class="fixed-cell">دبة زيت</td><td class="fixed-cell">لتر 4</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="ديزل"><td class="fixed-cell">10</td><td class="fixed-cell">ديزل</td><td class="fixed-cell">دبة 20 لتر</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                    <tr data-item="بنزول"><td class="fixed-cell">11</td><td class="fixed-cell">بنزول</td><td class="fixed-cell">دبة 20 لتر</td><td><input type="number" class="data-input" data-field="سعر_سوق_قديم"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_قديم"></td><td><input type="number" class="data-input" data-field="فارق_متوقع"></td><td><input type="number" class="data-input" data-field="فارق_كلفة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_منطقة_جديد"></td><td><input type="number" class="data-input" data-field="سعر_سوق_جديد"></td><td><input type="number" class="data-input" data-field="زمن_قديم"></td><td><input type="number" class="data-input" data-field="زمن_جديد"></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex justify-center mt-8">
+            <button id="submitBtn" class="primary-btn text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-300">
+                الموافقة على الإدخال وحفظ التقرير
+            </button>
+        </div>
+
+        <!-- رسالة عرض البيانات المجمعة وحالة الحفظ -->
+        <div id="outputMessage" class="mt-6 p-4 bg-gray-100 border-l-4 border-green-500 text-gray-700 rounded-md hidden">
+            <h3 class="font-semibold text-lg text-green-700 mb-2">
+                ✅ تم الحفظ بنجاح! يمكن نسخ الرسالة:
+                <button id="copyBtn" class="mr-3 bg-blue-500 text-white text-xs font-normal py-1 px-3 rounded-md hover:bg-blue-600 transition">
+                    نسخ النص
+                </button>
+            </h3>
+            <pre id="outputData" class="whitespace-pre-wrap text-sm"></pre>
+            <p id="copyStatus" class="mt-2 text-sm text-green-600 hidden"></p>
+        </div>
+    </div>
+
+    <!-- 2. واجهة عرض التقارير المُخزنة (القالب الثاني) -->
+    <div id="reportsView" class="hidden">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">التقارير الاقتصادية المُخزنة</h2>
+        
+        <div id="reportsList" class="space-y-4">
+            <!-- سيتم تحميل التقارير هنا ديناميكياً من Firestore -->
+            <p id="noReports" class="text-center text-gray-500">لا توجد تقارير مُخزنة بعد.</p>
+        </div>
+        
+        <!-- صندوق عرض تفاصيل التقرير (Modal-like) -->
+        <div id="reportDetailsContainer" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-lg p-6 w-full max-w-xl">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h3 class="text-lg font-bold text-blue-700">عرض تفاصيل التقرير</h3>
+                    <button id="closeReportDetails" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                <div id="reportContent" class="bg-gray-50 border p-3 rounded-md mb-4 text-sm max-h-96 overflow-y-auto"></div>
+                <button id="copyReportContentBtn" class="primary-btn text-white font-bold py-2 px-4 rounded-lg w-full transition duration-300">
+                    نسخ محتوى التقرير (واتساب)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // Firebase Imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Global Firebase Variables
+    let app, db, auth;
+    let userId = null;
+    let reportsCollectionRef = null;
+    let isAuthReady = false;
+
+    // Element lookups
+    const dataEntryView = document.getElementById('dataEntryView');
+    const reportsView = document.getElementById('reportsView');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const outputMessage = document.getElementById('outputMessage');
+
+
+    // --- 1. INITIALIZATION AND AUTHENTICATION ---
+    
+    // تأكد من وجود المتغيرات العامة (ضروري لبيئة التشغيل)
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    
+    if (firebaseConfig) {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        
+        // مسار المجموعة العامة لتخزين التقارير (لكي يتمكن الجميع من رؤيتها)
+        const reportCollectionPath = `/artifacts/${appId}/public/data/economic_reports`;
+        reportsCollectionRef = collection(db, reportCollectionPath);
+
+        // تسجيل الدخول التلقائي
+        const setupAuth = async () => {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                userId = auth.currentUser?.uid || 'anonymous';
+                isAuthReady = true;
+                console.log("Firebase Auth Initialized. User ID:", userId);
+                loadReports(); // ابدأ بتحميل التقارير بعد تسجيل الدخول
+            } catch (error) {
+                // قد يكون الخطأ هنا هو خطأ DOM من loadReports إذا تم استدعاؤه مبكرًا
+                console.error("Error during Firebase Auth:", error);
+                isAuthReady = true; // استمر في العمل حتى لو فشل التخزين
+            }
+        };
+
+        setupAuth();
+    } else {
+        console.error("Firebase config is missing. Database features disabled.");
+        isAuthReady = true;
+    }
+    
+    // --- 2. VIEW MANAGEMENT ---
+    
+    function setView(viewId) {
+        // إضافة التحقق من العناصر قبل استخدام classList
+        if (dataEntryView) dataEntryView.classList.add('hidden');
+        if (reportsView) reportsView.classList.add('hidden');
+        if (outputMessage) outputMessage.classList.add('hidden');
+        
+        if (viewId === 'entry' && dataEntryView) {
+            dataEntryView.classList.remove('hidden');
+        } else if (viewId === 'reports' && reportsView) {
+            reportsView.classList.remove('hidden');
+        }
+    }
+    
+    document.getElementById('showEntryBtn').addEventListener('click', () => setView('entry'));
+    document.getElementById('showReportsBtn').addEventListener('click', () => setView('reports'));
+    
+    // افتراضيًا، ابدأ بواجهة الإدخال
+    setView('entry');
+
+    // --- 3. DATA PROCESSING & SAVING (Firestore) ---
+
+    // دالة مساعدة لتحويل البيانات المجمعة إلى نص منسق (شكل رسالة واتساب)
+    function formatDataForWhatsApp(data) {
+        let whatsappMessage = `📊 *تقرير إدخال البيانات الاقتصادية (جدول 1)* 📊\n`;
+        whatsappMessage += `*تاريخ الإدخال:* ${new Date().toLocaleString('ar-SA')}\n\n`;
+        
+        // حقول البيانات وترتيب عرضها
+        const fieldsMapping = {
+            'سعر_سوق_قديم': 'السعر في أقرب سوق (قبل)',
+            'سعر_منطقة_قديم': 'السعر في المنطقة (قبل)',
+            'فارق_كلفة_قديم': 'فارق التكلفة (قبل)',
+            'فارق_متوقع': 'الفارق المتوقع',
+            'فارق_كلفة_جديد': 'فارق الكلفة (بعد)',
+            'سعر_منطقة_جديد': 'السعر في المنطقة (بعد)',
+            'سعر_سوق_جديد': 'السعر في أقرب سوق (بعد)',
+            'زمن_قديم': 'زمن الوصول (قبل/دقيقة)',
+            'زمن_جديد': 'زمن الوصول (بعد/دقيقة)'
+        };
+
+        data.forEach((item, index) => {
+            whatsappMessage += `*${index + 1}. السلعة: ${item['السلعة الأساسية']} (${item['الوحدة']})*\n`;
+            whatsappMessage += `------------------------------\n`;
+            
+            // ترتيب العرض للوضوح
+            whatsappMessage += `*💰 الأسعار قبل التدخل:*\n`;
+            whatsappMessage += `  - ${fieldsMapping.سعر_سوق_قديم}: ${item['السعر في أقرب سوق (قبل)'] || '0'}\n`;
+            whatsappMessage += `  - ${fieldsMapping.سعر_منطقة_قديم}: ${item['السعر في المنطقة (قبل)'] || '0'}\n`;
+            whatsappMessage += `  - ${fieldsMapping.فارق_كلفة_قديم}: ${item['فارق التكلفة (قبل)'] || '0'}\n`;
+
+            whatsappMessage += `*📉 فوارق الأسعار:*\n`;
+            whatsappMessage += `  - ${fieldsMapping.فارق_متوقع}: ${item['الفارق المتوقع'] || '0'}\n`;
+            whatsappMessage += `  - ${fieldsMapping.فارق_كلفة_جديد}: ${item['فارق الكلفة (بعد)'] || '0'}\n`;
+            
+            whatsappMessage += `*📈 الأسعار بعد التدخل:*\n`;
+            whatsappMessage += `  - ${fieldsMapping.سعر_منطقة_جديد}: ${item['السعر في المنطقة (بعد)'] || '0'}\n`;
+            whatsappMessage += `  - ${fieldsMapping.سعر_سوق_جديد}: ${item['السعر في أقرب سوق (بعد)'] || '0'}\n`;
+
+            whatsappMessage += `*⏱️ زمن الوصول للسوق:*\n`;
+            whatsappMessage += `  - ${fieldsMapping.زمن_قديم}: ${item['زمن الوصول (قبل/دقيقة)'] || '0'}\n`;
+            whatsappMessage += `  - ${fieldsMapping.زمن_جديد}: ${item['زمن الوصول (بعد/دقيقة)'] || '0'}\n`;
+
+            whatsappMessage += `==============================\n\n`;
+        });
+
+        whatsappMessage += `*👤 المُدخل:* ${userId.substring(0, 8)}...\n`;
+        whatsappMessage += '*✅ نهاية التقرير المُدخل. شكراً لك.*';
+        
+        return whatsappMessage;
+    }
+
+
+    async function collectData() {
+        if (!isAuthReady) {
+            console.error("Authentication not ready. Cannot save data.");
+            return; 
+        }
+
+        // إضافة التحقق قبل استخدام classList
+        if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+        if (outputMessage) outputMessage.classList.add('hidden');
+
+        const rows = document.querySelectorAll('#data-table tbody tr');
+        const collectedData = [];
+        
+        const fieldsMapping = {
+            'سعر_سوق_قديم': 'السعر في أقرب سوق (قبل)',
+            'سعر_منطقة_قديم': 'السعر في المنطقة (قبل)',
+            'فارق_كلفة_قديم': 'فارق التكلفة (قبل)',
+            'فارق_متوقع': 'الفارق المتوقع',
+            'فارق_كلفة_جديد': 'فارق الكلفة (بعد)',
+            'سعر_منطقة_جديد': 'السعر في المنطقة (بعد)',
+            'سعر_سوق_جديد': 'السعر في أقرب سوق (بعد)',
+            'زمن_قديم': 'زمن الوصول (قبل/دقيقة)',
+            'زمن_جديد': 'زمن الوصول (بعد/دقيقة)'
+        };
+
+        rows.forEach(row => {
+            const item = row.getAttribute('data-item');
+            const unitCell = row.querySelector('.fixed-cell:nth-child(3)');
+            const itemData = { 
+                'السلعة الأساسية': item,
+                'الوحدة': unitCell ? unitCell.textContent.trim() : 'N/A'
+            };
+            
+            const inputs = row.querySelectorAll('.data-input');
+            inputs.forEach(input => {
+                const fieldKey = input.getAttribute('data-field');
+                const value = input.value.trim();
+                const fieldName = fieldsMapping[fieldKey] || fieldKey;
+                itemData[fieldName] = value === '' ? 0 : parseFloat(value) || 0;
+            });
+            
+            collectedData.push(itemData);
+        });
+        
+        // 1. تحويل البيانات إلى نص منسق (للواتساب)
+        const formattedText = formatDataForWhatsApp(collectedData);
+        
+        try {
+            // 2. حفظ البيانات في Firestore
+            if (reportsCollectionRef) {
+                await addDoc(reportsCollectionRef, {
+                    reportData: collectedData,
+                    whatsappContent: formattedText,
+                    timestamp: serverTimestamp(),
+                    userId: userId
+                });
+            } else {
+                console.warn("Firestore not initialized. Skipping save operation.");
+            }
+            
+            // 3. عرض رسالة النجاح ونص الواتساب
+            const outputData = document.getElementById('outputData');
+            if (outputData) outputData.textContent = formattedText;
+            if (outputMessage) outputMessage.classList.remove('hidden');
+            
+        } catch (e) {
+            console.error("Error saving document to Firestore: ", e);
+            const errorMsg = document.getElementById('copyStatus');
+            if (errorMsg) {
+                errorMsg.textContent = '❌ فشل حفظ التقرير في قاعدة البيانات.';
+                errorMsg.classList.remove('hidden', 'text-green-600');
+                errorMsg.classList.add('text-red-600');
+                setTimeout(() => errorMsg.classList.add('hidden'), 5000);
+            }
+        } finally {
+            // إضافة التحقق قبل استخدام classList
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
+        }
+    }
+    
+    // --- 4. DATA LOADING (Firestore) ---
+
+    function loadReports() {
+        if (!isAuthReady || !reportsCollectionRef) {
+            return; 
+        }
+
+        // إضافة التحقق قبل استخدام classList
+        if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+        
+        const reportsList = document.getElementById('reportsList');
+        const noReports = document.getElementById('noReports');
+
+        if (!reportsList) {
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
+            console.error("reportsList element not found.");
+            return;
+        }
+
+        reportsList.innerHTML = '';
+        if (noReports) noReports.classList.add('hidden');
+
+        // إنشاء استعلام للتقارير (مرتبة حسب الأحدث)
+        // لا تستخدم orderBy("timestamp", "desc") لتجنب أخطاء الفهرسة (Index Errors) في Canvas.
+        // سنقوم بالفرز في JavaScript بدلاً من ذلك.
+        const q = query(reportsCollectionRef); 
+        
+        // الاستماع للتغييرات في الوقت الفعلي
+        onSnapshot(q, (snapshot) => {
+            let reports = [];
+            snapshot.docs.forEach(doc => {
+                reports.push({ id: doc.id, ...doc.data() });
+            });
+
+            // الفرز محلياً في JavaScript (الأحدث أولاً)
+            reports.sort((a, b) => {
+                const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+                const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+                return timeB - timeA;
+            });
+            
+            reportsList.innerHTML = ''; // مسح القائمة الحالية
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
+            
+            if (reports.length === 0) {
+                if (noReports) noReports.classList.remove('hidden');
+                return;
+            }
+            
+            reports.forEach(data => {
+                const date = data.timestamp ? data.timestamp.toDate().toLocaleDateString('ar-SA') : 'N/A';
+                
+                const reportCard = document.createElement('div');
+                reportCard.className = 'bg-white border border-gray-200 p-4 rounded-lg shadow-md flex justify-between items-center';
+                reportCard.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-gray-800">تقرير بتاريخ: ${date}</p>
+                        <p class="text-sm text-gray-500">تم إدخاله بواسطة: ${data.userId ? data.userId.substring(0, 8) + '...' : 'مجهول'}</p>
+                    </div>
+                    <button data-report-id="${data.id}" class="view-report-btn secondary-btn text-white py-1 px-3 rounded-md transition duration-300">
+                        عرض التفاصيل
+                    </button>
+                `;
+                reportsList.appendChild(reportCard);
+            });
+            
+            // إضافة مستمعي الأحداث لأزرار "عرض التفاصيل"
+            document.querySelectorAll('.view-report-btn').forEach(button => {
+                button.addEventListener('click', (e) => showReportDetails(e.target.dataset.reportId));
+            });
+        }, (error) => {
+            console.error("Error listening to reports:", error);
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
+            reportsList.innerHTML = '<p class="text-center text-red-500">فشل في تحميل التقارير.</p>';
+        });
+    }
+
+    // --- 5. REPORT DETAILS MODAL ---
+
+    async function showReportDetails(reportId) {
+        if (!isAuthReady) return;
+        
+        const reportDetailsContainer = document.getElementById('reportDetailsContainer');
+        const reportContent = document.getElementById('reportContent');
+
+        if (!reportDetailsContainer || !reportContent) {
+            console.error("Modal elements not found.");
+            return;
+        }
+
+        reportContent.textContent = 'جارٍ تحميل التقرير...';
+        reportDetailsContainer.classList.remove('hidden');
+        
+        try {
+            // بما أننا نستخدم onSnapshot بدون orderBy، يمكننا جلب التفاصيل باستخدام getDocs
+            // ولكن للحفاظ على الاتساق مع onSnapshot:
+            
+            const reportsSnapshot = await new Promise(resolve => {
+                const unsubscribe = onSnapshot(query(reportsCollectionRef), (snapshot) => {
+                    unsubscribe();
+                    resolve(snapshot);
+                });
+            });
+
+            const docFound = reportsSnapshot.docs.find(d => d.id === reportId);
+            const reportData = docFound ? docFound.data() : null;
+
+            if (reportData) {
+                reportContent.textContent = reportData.whatsappContent;
+            } else {
+                reportContent.textContent = 'عذراً، لم يتم العثور على هذا التقرير.';
+                console.error("Report not found:", reportId);
+            }
+            
+        } catch(e) {
+            reportContent.textContent = 'حدث خطأ أثناء جلب التفاصيل.';
+            console.error("Error fetching report details:", e);
+        }
+    }
+
+    document.getElementById('closeReportDetails').addEventListener('click', () => {
+        const reportDetailsContainer = document.getElementById('reportDetailsContainer');
+        if (reportDetailsContainer) reportDetailsContainer.classList.add('hidden');
+    });
+
+    document.getElementById('copyReportContentBtn').addEventListener('click', () => {
+        const reportContent = document.getElementById('reportContent');
+        if (reportContent) {
+            copyTextToClipboard(reportContent.textContent);
+        }
+    });
+
+
+    // --- 6. UTILITIES (Copy function updated to be reusable) ---
+
+    // دالة لنسخ النص إلى الحافظة
+    function copyTextToClipboard(textToCopy) {
+        const copyStatus = document.getElementById('copyStatus');
+        
+        // استخدام execCommand لضمان التوافقية في بيئات التشغيل المختلفة
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful && copyStatus) {
+                copyStatus.textContent = '✅ تم نسخ النص بنجاح إلى الحافظة!';
+                copyStatus.classList.remove('hidden', 'text-red-600');
+                copyStatus.classList.add('text-green-600');
+            } else if (copyStatus) {
+                copyStatus.textContent = '❌ فشل النسخ، يرجى النسخ يدوياً.';
+                copyStatus.classList.remove('hidden', 'text-green-600');
+                copyStatus.classList.add('text-red-600');
+            }
+        } catch (err) {
+            if (copyStatus) {
+                copyStatus.textContent = '❌ فشل النسخ، يرجى النسخ يدوياً.';
+                copyStatus.classList.remove('hidden', 'text-green-600');
+                copyStatus.classList.add('text-red-600');
+            }
+            console.error('Copy failed:', err);
+        } finally {
+            document.body.removeChild(textarea);
+        }
+        
+        // إظهار رسالة الحالة مؤقتًا في واجهة الإدخال
+        if (outputMessage) outputMessage.classList.remove('hidden');
+        if (copyStatus) {
+            setTimeout(() => {
+                copyStatus.classList.add('hidden');
+            }, 3000);
+        }
+    }
+    
+    // ربط زر الإرسال بالدالة الرئيسية
+    document.getElementById('submitBtn').addEventListener('click', collectData);
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        const outputData = document.getElementById('outputData');
+        if (outputData) {
+             copyTextToClipboard(outputData.textContent);
+        }
+    });
+
+</script>
+</body>
+</html>
